@@ -28,6 +28,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/gofrs/uuid"
+	"github.com/jonboulle/clockwork"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -110,6 +111,9 @@ func main() {
 					),
 				)
 				return r
+			},
+			func() clockwork.Clock {
+				return clockwork.NewRealClock()
 			},
 		),
 		fx.Invoke(cli.Start),
