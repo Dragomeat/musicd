@@ -5,6 +5,16 @@ volumes:
   postgres:
 
 services:
+  web:
+    build:
+      context: ./web
+      target: dev
+    ports:
+      - 3000:3000
+    volumes:
+      - ./web:/app
+    restart: unless-stopped
+
   api:
     build: .
     ports:
