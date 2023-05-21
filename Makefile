@@ -2,8 +2,6 @@
 RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(eval $(RUN_ARGS):;@:)
 
-start=reflex -r '(\.go$|go\.mod)' -R .idea/ -s -d none $(2) -- sh -c 'make build && $(or $(value 1), /usr/bin/musicd serve)'
-
 define setup_env
 	$(eval ENV_FILE := .env$(1))
 	$(eval include .env$(1))
@@ -24,22 +22,6 @@ endef
 ####################################################################################################
 help: ## Commands list
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
-
-build:
-	go build -buildvcs=false -o /usr/bin/musicd cmd/main.go
-
-start:
-	$(call start)
-
-generate: ## Generate code 
-	go generate ./...
-
-analyze: ## Run static analyzer
-	test -s ./bin/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.2
-	./bin/golangci-lint run -c ./.golangci.yaml ./...
-
-test: ## Run tests
-	go test ./internal/...
 
 .PHONY: sqitch-link 
 sqitch-link:
@@ -80,7 +62,4 @@ db-add: sqitch-link  ## Add a new migration
 db-rollback: sqitch-link ## Rollback database migrations over the real DB
 	$(call setup_env,)
 	TZ=UTC sqitch revert $(RUN_ARGS)
-
-db-generate: ## Generate DTO and DAO for modules
-	find . -path './internal/*/sqlc.yaml' -exec sqlc -f '{}' generate ';'
 

@@ -1,26 +1,25 @@
 version: "3"
 
 tasks:
-  build:
-    sources:
-      - "./**/*.go"
-      - "./**/*.graphql"
-      - "./**/*.sql"
-      - "./**/*.yaml"
-      - go.mod
-    generates:
-      - bin/musicd
-    cmds:
-      - task: generate
-      - go build -buildvcs=false -o bin/musicd cmd/main.go
   start-api:
+    desc: Start api
     cmds:
-      - task: build
-      - bin/musicd serve
+      - reflex -r '(\.go$|go\.mod)' -R .idea/ -s -d none -- sh -c 'task build && ./bin/musicd serve'
   generate:
+    desc: Generate code (gqlgen, sqlc, etc)
     cmds:
       - go generate ./...
+  build:
+    desc: Build binary
+    cmds:
+      - go build -o ./bin/musicd cmd/main.go
+  analyze:
+    desc: Perform static checks
+    cmds: 
+      - test -s ./bin/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.2
+      - ./bin/golangci-lint run -c ./golangci.yaml ./...
   test:
+    desc: Run tests
     cmds:
       - go test -coverprofile cover.out ./internal/...
       - go tool cover -html=cover.out
