@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"gopkg.in/guregu/null.v4"
 )
 
 type Artist struct {
@@ -142,14 +143,24 @@ func NewTrack(
 	}, nil
 }
 
+type TrackEdge struct {
+	Cursor string
+	Node   *Track
+}
+
 type Tracks interface {
 	FindTracks(ctx context.Context, trackIds []uuid.UUID) (map[uuid.UUID]*Track, error)
+	PaginateTracks(ctx context.Context, first int, after null.String, before null.String) ([]TrackEdge, error)
 	Create(ctx context.Context, track Track) error
 }
 
 type NullTracks struct{}
 
 func (NullTracks) FindTracks(ctx context.Context, trackIds []uuid.UUID) (map[uuid.UUID]*Track, error) {
+	return nil, nil
+}
+
+func (NullTracks) PaginateTracks(ctx context.Context, first int, after null.String, before null.String) ([]TrackEdge, error) {
 	return nil, nil
 }
 

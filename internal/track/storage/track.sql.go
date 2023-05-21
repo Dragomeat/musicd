@@ -73,3 +73,48 @@ func (q *Queries) FindTracks(ctx context.Context, trackIds []uuid.UUID) ([]Track
 	}
 	return items, nil
 }
+
+const paginateTracks = `-- name: PaginateTracks :many
+select id, artist_id, album_id, title, duration, files, uploaded_by, uploaded_at
+from "track"
+where $1::timestamp is null
+   or uploaded_at < $1
+   or ($2::uuid is null or (uploaded_at = $1 and id > $2))
+order by uploaded_at desc, id
+limit $3
+`
+
+type PaginateTracksParams struct {
+	AfterUploadedAt null.Time
+	AfterID         uuid.NullUUID
+	First           int32
+}
+
+func (q *Queries) PaginateTracks(ctx context.Context, arg PaginateTracksParams) ([]Track, error) {
+	rows, err := q.db.Query(ctx, paginateTracks, arg.AfterUploadedAt, arg.AfterID, arg.First)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Track
+	for rows.Next() {
+		var i Track
+		if err := rows.Scan(
+			&i.ID,
+			&i.ArtistID,
+			&i.AlbumID,
+			&i.Title,
+			&i.Duration,
+			&i.Files,
+			&i.UploadedBy,
+			&i.UploadedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

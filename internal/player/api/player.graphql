@@ -51,13 +51,6 @@ type QueuedTrackEdge {
   node: QueuedTrack!
 }
 
-type Track {
-  id: UUID!
-  title: String!
-  durationInSeconds: Int!
-  url: String!
-}
-
 type Person {
   id: UUID!
   name: String!

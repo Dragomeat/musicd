@@ -1,0 +1,20 @@
+extend type Query {
+  tracks(first: Int! = 20, after: String, before: String): TrackList!
+}
+
+type TrackList {
+  pageInfo: PageInfo!
+  edges: [TrackEdge!]!
+}
+
+type TrackEdge {
+  cursor: String!
+  node: Track!
+}
+
+type Track {
+  id: UUID!
+  title: String!
+  durationInSeconds: Int!
+  url: String!
+}

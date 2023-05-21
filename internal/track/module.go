@@ -19,6 +19,7 @@ func NewModule() fx.Option {
 		temporal.Provide[*download.Workflow](download.NewWorkflow),
 		fx.Provide(
 			api.NewTrackLoaderFactory,
+			api.NewTrackResolver,
 
 			download.NewTrigger,
 			download.NewYoutubeDownloader,

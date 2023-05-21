@@ -9,41 +9,13 @@ import (
 	"fmt"
 	"musicd/graph/generated"
 	"musicd/graph/model"
-	inGraphql "musicd/internal/graphql"
-	trackDomain "musicd/internal/track/domain"
-	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gofrs/uuid"
 )
 
 // Track is the resolver for the track field.
 func (r *currentTrackResolver) Track(ctx context.Context, obj *model.CurrentTrack) (*model.Track, error) {
-	trackLoader := inGraphql.GetLoader[uuid.UUID, *trackDomain.Track](ctx, r.trackLoaderFactory)
-
-	track, err := trackLoader.Load(ctx, obj.Track.ID)()
-	if err != nil {
-		return nil, err
-	}
-
-	presignClient := s3.NewPresignClient(r.s3)
-	req, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String("musicd"),
-		Key:    aws.String(track.Files[0].Sha256),
-	}, func(opts *s3.PresignOptions) {
-		opts.Expires = 1 * time.Hour
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &model.Track{
-		ID:                track.ID,
-		Title:             track.Title,
-		DurationInSeconds: track.Duration,
-		URL:               req.URL,
-	}, nil
+	return r.trackResolver.GetTrack(ctx, obj.Track.ID)
 }
 
 // CreatePlayer is the resolver for the createPlayer field.
@@ -103,30 +75,7 @@ func (r *queryResolver) Queue(ctx context.Context, playerID uuid.UUID, first int
 
 // Track is the resolver for the track field.
 func (r *queuedTrackResolver) Track(ctx context.Context, obj *model.QueuedTrack) (*model.Track, error) {
-	trackLoader := inGraphql.GetLoader[uuid.UUID, *trackDomain.Track](ctx, r.trackLoaderFactory)
-
-	track, err := trackLoader.Load(ctx, obj.Track.ID)()
-	if err != nil {
-		return nil, err
-	}
-
-	presignClient := s3.NewPresignClient(r.s3)
-	req, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String("musicd"),
-		Key:    aws.String(track.Files[0].Sha256),
-	}, func(opts *s3.PresignOptions) {
-		opts.Expires = 1 * time.Hour
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &model.Track{
-		ID:                track.ID,
-		Title:             track.Title,
-		DurationInSeconds: track.Duration,
-		URL:               req.URL,
-	}, nil
+	return r.trackResolver.GetTrack(ctx, obj.Track.ID)
 }
 
 // CurrentTrack returns generated.CurrentTrackResolver implementation.

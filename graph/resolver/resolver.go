@@ -9,20 +9,19 @@ import (
 )
 
 type Resolver struct {
-	playerResolver     *playerApi.PlayerResolver
-	trackLoaderFactory *trackApi.TrackLoaderFactory
-	s3                 *s3.Client
+	playerResolver *playerApi.PlayerResolver
+	trackResolver  *trackApi.TrackResolver
 }
 
 func NewResolver(
 	playerResolver *playerApi.PlayerResolver,
+	trackResolver *trackApi.TrackResolver,
 	trackLoaderFactory *trackApi.TrackLoaderFactory,
 	s3 *s3.Client,
 ) *Resolver {
 	return &Resolver{
-		playerResolver:     playerResolver,
-		trackLoaderFactory: trackLoaderFactory,
-		s3:                 s3,
+		playerResolver: playerResolver,
+		trackResolver:  trackResolver,
 	}
 }
 

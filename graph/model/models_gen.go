@@ -83,6 +83,16 @@ type Track struct {
 	URL               string    `json:"url"`
 }
 
+type TrackEdge struct {
+	Cursor string `json:"cursor"`
+	Node   *Track `json:"node"`
+}
+
+type TrackList struct {
+	PageInfo *PageInfo    `json:"pageInfo"`
+	Edges    []*TrackEdge `json:"edges"`
+}
+
 type VoidBox struct {
 	Value interface{} `json:"value"`
 }

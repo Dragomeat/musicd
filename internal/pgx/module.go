@@ -13,8 +13,7 @@ import (
 )
 
 type ModuleConfig struct {
-	PgDsn       string `mapstructure:"PGX_DSN"`
-	SlowQueryMs int    `mapstructure:"PGX_SLOW_QUERY_LOGGING_LIMIT"`
+	PgDsn string `mapstructure:"PGX_DSN"`
 }
 
 func NewPgx(

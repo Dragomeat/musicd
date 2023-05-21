@@ -116,6 +116,7 @@ type ComplexityRoot struct {
 	Query struct {
 		Player func(childComplexity int, playerID uuid.UUID) int
 		Queue  func(childComplexity int, playerID uuid.UUID, first int, after *string, before *string) int
+		Tracks func(childComplexity int, first int, after *string, before *string) int
 	}
 
 	QueuedTrack struct {
@@ -141,6 +142,16 @@ type ComplexityRoot struct {
 		URL               func(childComplexity int) int
 	}
 
+	TrackEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
+	}
+
+	TrackList struct {
+		Edges    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	VoidBox struct {
 		Value func(childComplexity int) int
 	}
@@ -163,6 +174,7 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Player(ctx context.Context, playerID uuid.UUID) (*model.Player, error)
 	Queue(ctx context.Context, playerID uuid.UUID, first int, after *string, before *string) (*model.QueuedTrackList, error)
+	Tracks(ctx context.Context, first int, after *string, before *string) (*model.TrackList, error)
 }
 type QueuedTrackResolver interface {
 	Track(ctx context.Context, obj *model.QueuedTrack) (*model.Track, error)
@@ -511,6 +523,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Queue(childComplexity, args["playerId"].(uuid.UUID), args["first"].(int), args["after"].(*string), args["before"].(*string)), true
 
+	case "Query.tracks":
+		if e.complexity.Query.Tracks == nil {
+			break
+		}
+
+		args, err := ec.field_Query_tracks_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Tracks(childComplexity, args["first"].(int), args["after"].(*string), args["before"].(*string)), true
+
 	case "QueuedTrack.queuedAt":
 		if e.complexity.QueuedTrack.QueuedAt == nil {
 			break
@@ -587,6 +611,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Track.URL(childComplexity), true
+
+	case "TrackEdge.cursor":
+		if e.complexity.TrackEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.TrackEdge.Cursor(childComplexity), true
+
+	case "TrackEdge.node":
+		if e.complexity.TrackEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.TrackEdge.Node(childComplexity), true
+
+	case "TrackList.edges":
+		if e.complexity.TrackList.Edges == nil {
+			break
+		}
+
+		return e.complexity.TrackList.Edges(childComplexity), true
+
+	case "TrackList.pageInfo":
+		if e.complexity.TrackList.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.TrackList.PageInfo(childComplexity), true
 
 	case "VoidBox.value":
 		if e.complexity.VoidBox.Value == nil {
@@ -755,13 +807,6 @@ type QueuedTrackEdge {
   node: QueuedTrack!
 }
 
-type Track {
-  id: UUID!
-  title: String!
-  durationInSeconds: Int!
-  url: String!
-}
-
 type Person {
   id: UUID!
   name: String!
@@ -776,6 +821,27 @@ directive @goField(
   forceResolver: Boolean
   name: String
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+`, BuiltIn: false},
+	{Name: "../../internal/track/api/track.graphql", Input: `extend type Query {
+  tracks(first: Int! = 20, after: String, before: String): TrackList!
+}
+
+type TrackList {
+  pageInfo: PageInfo!
+  edges: [TrackEdge!]!
+}
+
+type TrackEdge {
+  cursor: String!
+  node: Track!
+}
+
+type Track {
+  id: UUID!
+  title: String!
+  durationInSeconds: Int!
+  url: String!
+}
 `, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1033,6 +1099,39 @@ func (ec *executionContext) field_Query_queue_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["before"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_tracks_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["first"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["first"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["after"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["after"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["before"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("before"))
+		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["before"] = arg2
 	return args, nil
 }
 
@@ -3128,6 +3227,67 @@ func (ec *executionContext) fieldContext_Query_queue(ctx context.Context, field 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_tracks(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_tracks(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Tracks(rctx, fc.Args["first"].(int), fc.Args["after"].(*string), fc.Args["before"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.TrackList)
+	fc.Result = res
+	return ec.marshalNTrackList2ᚖmusicdᚋgraphᚋmodelᚐTrackList(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_tracks(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "pageInfo":
+				return ec.fieldContext_TrackList_pageInfo(ctx, field)
+			case "edges":
+				return ec.fieldContext_TrackList_edges(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type TrackList", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_tracks_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query___type(ctx, field)
 	if err != nil {
@@ -3776,6 +3936,208 @@ func (ec *executionContext) fieldContext_Track_url(ctx context.Context, field gr
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TrackEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.TrackEdge) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TrackEdge_cursor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Cursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TrackEdge_cursor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TrackEdge",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TrackEdge_node(ctx context.Context, field graphql.CollectedField, obj *model.TrackEdge) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TrackEdge_node(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Node, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Track)
+	fc.Result = res
+	return ec.marshalNTrack2ᚖmusicdᚋgraphᚋmodelᚐTrack(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TrackEdge_node(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TrackEdge",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Track_id(ctx, field)
+			case "title":
+				return ec.fieldContext_Track_title(ctx, field)
+			case "durationInSeconds":
+				return ec.fieldContext_Track_durationInSeconds(ctx, field)
+			case "url":
+				return ec.fieldContext_Track_url(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Track", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TrackList_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.TrackList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TrackList_pageInfo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖmusicdᚋgraphᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TrackList_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TrackList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "startCursor":
+				return ec.fieldContext_PageInfo_startCursor(ctx, field)
+			case "endCursor":
+				return ec.fieldContext_PageInfo_endCursor(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TrackList_edges(ctx context.Context, field graphql.CollectedField, obj *model.TrackList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TrackList_edges(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Edges, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.TrackEdge)
+	fc.Result = res
+	return ec.marshalNTrackEdge2ᚕᚖmusicdᚋgraphᚋmodelᚐTrackEdgeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TrackList_edges(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TrackList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "cursor":
+				return ec.fieldContext_TrackEdge_cursor(ctx, field)
+			case "node":
+				return ec.fieldContext_TrackEdge_node(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type TrackEdge", field.Name)
 		},
 	}
 	return fc, nil
@@ -6156,6 +6518,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
+		case "tracks":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_tracks(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "__type":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -6338,6 +6723,76 @@ func (ec *executionContext) _Track(ctx context.Context, sel ast.SelectionSet, ob
 		case "url":
 
 			out.Values[i] = ec._Track_url(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var trackEdgeImplementors = []string{"TrackEdge"}
+
+func (ec *executionContext) _TrackEdge(ctx context.Context, sel ast.SelectionSet, obj *model.TrackEdge) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, trackEdgeImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TrackEdge")
+		case "cursor":
+
+			out.Values[i] = ec._TrackEdge_cursor(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "node":
+
+			out.Values[i] = ec._TrackEdge_node(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var trackListImplementors = []string{"TrackList"}
+
+func (ec *executionContext) _TrackList(ctx context.Context, sel ast.SelectionSet, obj *model.TrackList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, trackListImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TrackList")
+		case "pageInfo":
+
+			out.Values[i] = ec._TrackList_pageInfo(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "edges":
+
+			out.Values[i] = ec._TrackList_edges(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -6957,6 +7412,74 @@ func (ec *executionContext) marshalNTrack2ᚖmusicdᚋgraphᚋmodelᚐTrack(ctx 
 		return graphql.Null
 	}
 	return ec._Track(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNTrackEdge2ᚕᚖmusicdᚋgraphᚋmodelᚐTrackEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TrackEdge) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTrackEdge2ᚖmusicdᚋgraphᚋmodelᚐTrackEdge(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTrackEdge2ᚖmusicdᚋgraphᚋmodelᚐTrackEdge(ctx context.Context, sel ast.SelectionSet, v *model.TrackEdge) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TrackEdge(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNTrackList2musicdᚋgraphᚋmodelᚐTrackList(ctx context.Context, sel ast.SelectionSet, v model.TrackList) graphql.Marshaler {
+	return ec._TrackList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTrackList2ᚖmusicdᚋgraphᚋmodelᚐTrackList(ctx context.Context, sel ast.SelectionSet, v *model.TrackList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TrackList(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUUID2githubᚗcomᚋgofrsᚋuuidᚐUUID(ctx context.Context, v interface{}) (uuid.UUID, error) {
