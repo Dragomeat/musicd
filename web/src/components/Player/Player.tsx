@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { Box, Button, Spinner, Text, RangeInput } from "grommet";
+import { Box, Button, Spinner, Text, RangeInput, Layer } from "grommet";
 import {
   Disc as DiscIcon,
+  Menu as QueueIcon,
   Play as PlayIcon,
   Pause as PauseIcon,
   Rewind as PreviousIcon,
@@ -12,6 +13,9 @@ import {
   VolumeMute as VolumeMuteIcon,
 } from "grommet-icons";
 import {
+  GET_PLAYER,
+  QUEUE_TRACK,
+  REMOVE_TRACK_FROM_QUEUE,
   START_PLAYER,
   STOP_PLAYER,
   SEEK_TO,
@@ -51,16 +55,19 @@ const useInterval = (callback: Function, delay: number) => {
   }, [delay]);
 };
 
-export const Player = ({ id: playerId, currentTrack }: any) => {
+export const Player = ({ toggleQueueVisibility }: any) => {
+  const { loading: loadingPlayer, data: { player } = {} } = useQuery(GET_PLAYER, {
+    variables: { id: "1edebfee-dea1-6940-a35a-35daf92b7deb" },
+  });
+
   const {
-    track: { id, title, url, durationInSeconds: defaultDurationInSeconds },
-    positionInSeconds: defaultPositionInSeconds,
-    playing: defaultPlaying,
-  } = currentTrack || {
-    track: { id: "none", title: "Unknown", url: "", durationInSeconds: 0 },
-    positionInSeconds: 0,
-    playing: false,
-  };
+    id: playerId = "none",
+    currentTrack: {
+      track: { id = "none", title = "Unknown", url = "", durationInSeconds: defaultDurationInSeconds = "" } = {},
+      positionInSeconds: defaultPositionInSeconds = 0,
+      playing: defaultPlaying = false,
+    } = {},
+  } = player || {};
 
   const [startPlayer, { loading: startingPlayer }] = useMutation(START_PLAYER, {
     variables: {
@@ -78,23 +85,8 @@ export const Player = ({ id: playerId, currentTrack }: any) => {
 
   const [seekTo, { loading: seekingTo }] = useMutation(SEEK_TO);
 
-  const [previousTrack, { loading: settingPreviousTrack }] = useMutation(
-    PREVIOUS_TRACK,
-    {
-      variables: {
-        playerId,
-      },
-    }
-  );
-
-  const [nextTrack, { data, loading: settingNextTrack, error }] = useMutation(
-    NEXT_TRACK,
-    {
-      variables: {
-        playerId,
-      },
-    }
-  );
+  const [previousTrack, { loading: settingPreviousTrack }] = useMutation(PREVIOUS_TRACK);
+  const [nextTrack, { data, loading: settingNextTrack }] = useMutation(NEXT_TRACK);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -187,6 +179,7 @@ export const Player = ({ id: playerId, currentTrack }: any) => {
   const trackUrl = useMemo(() => url, [id]);
 
   const loading =
+    loadingPlayer ||
     startingPlayer ||
     stoppingPlayer ||
     settingPreviousTrack ||
@@ -194,14 +187,15 @@ export const Player = ({ id: playerId, currentTrack }: any) => {
 
   return (
     <Box
+      fill="horizontal"
       pad="small"
       gap="medium"
       direction="row"
       justify="between"
       background="light-1"
     >
-      <Box direction="row" pad="small" gap="small" width="medium">
-        <Box alignSelf="center">
+      <Box direction="row" align="center" pad="small" gap="small" width="medium">
+        <Box>
           <DiscIcon />
         </Box>
         <Box>
@@ -211,7 +205,7 @@ export const Player = ({ id: playerId, currentTrack }: any) => {
       </Box>
       <Box pad="small" alignContent="center" justify="center" fill="horizontal">
         <Box direction="row" gap="small" alignSelf="center">
-          <Button onClick={() => previousTrack()} disabled={loading}>
+          <Button onClick={() => previousTrack({ variables: { playerId } })} disabled={loading}>
             <PreviousIcon />
           </Button>
           {loading ? (
@@ -221,7 +215,7 @@ export const Player = ({ id: playerId, currentTrack }: any) => {
               {isPlaying ? <PauseIcon /> : <PlayIcon />}
             </Button>
           )}
-          <Button onClick={() => nextTrack()} disabled={loading}>
+          <Button onClick={() => nextTrack({ variables: { playerId } })} disabled={loading}>
             <NextIcon />
           </Button>
         </Box>
@@ -241,18 +235,21 @@ export const Player = ({ id: playerId, currentTrack }: any) => {
           autoPlay={isPlaying}
           src={trackUrl}
           onLoadedMetadata={onLoadedMetadata}
-          onEnded={() => nextTrack()}
+          onEnded={() => nextTrack({ variables: { playerId } })}
           ref={audioRef}
         />
       </Box>
       <Box
         pad="small"
-        gap="small"
+        gap="medium"
         width="medium"
         direction="row"
         alignSelf="center"
         justify="end"
       >
+        <Box>
+          <Button onClick={toggleQueueVisibility}><QueueIcon /></Button>
+        </Box>
         <Button onClick={() => setMuteVolume((prev) => !prev)}>
           {muteVolume || volume === 0 ? (
             <VolumeMuteIcon />
