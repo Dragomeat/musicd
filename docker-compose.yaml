@@ -1,0 +1,87 @@
+version: "3.3"
+
+volumes:
+  minio:
+  postgres:
+
+services:
+  api:
+    build: .
+    ports:
+      - 8888:8888
+    volumes:
+      - .:/go/src/app
+    restart: unless-stopped
+
+  downloader:
+    build: .
+    volumes:
+      - .:/go/src/app
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: musicd
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: musicd
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+      - "6831:6831/udp"
+    environment:
+      - LOG_LEVEL=debug
+
+  minio:
+    image: quay.io/minio/minio
+    command: server --console-address ":9001" /data
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - minio:/data
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: secret123321@
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  temporal:
+    depends_on:
+      - postgres
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=musicd
+      - POSTGRES_PWD=secret
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    image: temporalio/auto-setup:1.20.2
+    ports:
+      - 7233:7233
+    labels:
+      kompose.volume.type: configMap
+    volumes:
+      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
+
+  temporal-ui:
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8080
+      - TEMPORAL_CSRF_COOKIE_INSECURE=true
+    image: temporalio/ui:2.14.0
+    ports:
+      - 8080:8080

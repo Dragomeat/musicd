@@ -1,0 +1,24 @@
+type Image {
+    id: String!
+    url: String!
+    thumbnails: ImageThumbnails!
+    sizes: ImageSizes!
+}
+
+type ImageThumbnails {
+    s295: ImageThumbnail!
+    m600: ImageThumbnail!
+    b960: ImageThumbnail!
+    w1200: ImageThumbnail!
+    f1920: ImageThumbnail!
+}
+
+type ImageThumbnail {
+    url: String!
+    sizes: ImageSizes!
+}
+
+type ImageSizes {
+    width: Int!
+    height: Int!
+}

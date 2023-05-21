@@ -1,0 +1,26 @@
+version: "3"
+
+tasks:
+  build:
+    sources:
+      - "./**/*.go"
+      - "./**/*.graphql"
+      - "./**/*.sql"
+      - "./**/*.yaml"
+      - go.mod
+    generates:
+      - bin/musicd
+    cmds:
+      - task: generate
+      - go build -buildvcs=false -o bin/musicd cmd/main.go
+  start-api:
+    cmds:
+      - task: build
+      - bin/musicd serve
+  generate:
+    cmds:
+      - go generate ./...
+  test:
+    cmds:
+      - go test -coverprofile cover.out ./internal/...
+      - go tool cover -html=cover.out

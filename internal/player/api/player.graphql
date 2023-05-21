@@ -1,0 +1,74 @@
+extend type Query {
+  player(playerId: UUID!): Player!
+  queue(
+    playerId: UUID!
+    first: Int! = 25
+    after: String
+    before: String
+  ): QueuedTrackList!
+}
+
+extend type Mutation {
+  createPlayer: Player!
+  startPlayer(playerId: UUID!): Player!
+  stopPlayer(playerId: UUID!): Player!
+  seekTo(playerId: UUID!, positionInSeconds: Int!): Player!
+  queueTrack(playerId: UUID!, trackId: UUID!): Player!
+  removeTrackFromQueue(playerId: UUID!, trackId: UUID!): Player!
+  moveTrackInQueue(playerId: UUID!, trackId: UUID!, position: Int!): Player!
+  previousTrack(playerId: UUID!): Player!
+  nextTrack(playerId: UUID!): Player!
+}
+
+type Player {
+  id: UUID!
+  host: Person!
+  currentTrack: CurrentTrack
+  queue(first: Int! = 5): [QueuedTrack!]!
+  tracksInQueue: Int!
+}
+
+type CurrentTrack {
+  track: Track! @goField(forceResolver: true)
+  queuedBy: Person!
+  positionInSeconds: Int!
+  playing: Boolean!
+}
+
+type QueuedTrack {
+  track: Track! @goField(forceResolver: true)
+  queuedBy: Person!
+  queuedAt: Timestamp!
+}
+
+type QueuedTrackList {
+  edges: [QueuedTrackEdge!]!
+  pageInfo: PageInfo!
+}
+
+type QueuedTrackEdge {
+  cursor: String!
+  node: QueuedTrack!
+}
+
+type Track {
+  id: UUID!
+  title: String!
+  durationInSeconds: Int!
+  url: String!
+}
+
+type Person {
+  id: UUID!
+  name: String!
+}
+
+directive @goModel(
+  model: String
+  models: [String!]
+) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
+
+directive @goField(
+  forceResolver: Boolean
+  name: String
+) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION

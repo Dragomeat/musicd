@@ -1,0 +1,5 @@
+%syntax-version=1.0.0
+%project=musicd
+
+track/20230403150903_add_track_table 2023-04-03T15:09:03Z Artem Prosvetov <i@dragomeat.com> # Add track table
+player/20230422205105_add_player_table 2023-04-22T20:51:06Z Artem Prosvetov <i@dragomeat.com> # Add player table

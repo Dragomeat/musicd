@@ -1,0 +1,42 @@
+version: "2"
+overrides:
+  go:
+    overrides:
+      - db_type: "uuid"
+        go_type: "github.com/gofrs/uuid.UUID"
+        nullable: false
+      - db_type: "uuid"
+        go_type: "github.com/gofrs/uuid.NullUUID"
+        nullable: true
+      - db_type: "text"
+        go_type:
+          import: "gopkg.in/guregu/null.v4"
+          package: "null"
+          type: "String"
+        nullable: true
+      - db_type: "pg_catalog.int4"
+        go_type:
+          import: "gopkg.in/guregu/null.v4"
+          package: "null"
+          type: "Int"
+        nullable: true
+      - db_type: "pg_catalog.timestamp"
+        go_type:
+          import: "gopkg.in/guregu/null.v4"
+          package: "null"
+          type: "Time"
+        nullable: true
+      - db_type: "pg_catalog.timestamp"
+        go_type: "time.Time"
+sql:
+  - schema: "storage/sqitch/deploy"
+    queries: "storage/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        package: "storage"
+        out: "storage"
+        sql_package: "pgx/v5"
+        overrides:
+          - column: "track.files"
+            go_type: "musicd/internal/track/domain.Files"
