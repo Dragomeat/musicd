@@ -195,11 +195,9 @@ export const Player = ({ toggleQueueVisibility }: any) => {
       background="light-1"
     >
       <Box direction="row" align="center" pad="small" gap="small" width="medium">
+        <DiscIcon />
         <Box>
-          <DiscIcon />
-        </Box>
-        <Box>
-          <Text>{title}</Text>
+          <Text truncate="tip">{title}</Text>
           <Text>Unknown</Text>
         </Box>
       </Box>
