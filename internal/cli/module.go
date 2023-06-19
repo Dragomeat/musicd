@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )
@@ -17,12 +18,10 @@ func ProvideCommand(command interface{}) interface{} {
 type StartCliParams struct {
 	fx.In
 
-	Lc         fx.Lifecycle
-	Shutdowner fx.Shutdowner
-	ErrChannel chan<- error     `name:"errors.channel"`
-	Root       *cobra.Command   `name:"cli.root"`
-	Commands   []*cobra.Command `group:"cli.commands"`
-	Runner     *Runner
+	Lc       fx.Lifecycle
+	Root     *cobra.Command   `name:"cli.root"`
+	Commands []*cobra.Command `group:"cli.commands"`
+	Runner   *Runner
 }
 
 func NewRootCommand(params StartCliParams) *cobra.Command {
@@ -33,24 +32,10 @@ func NewRootCommand(params StartCliParams) *cobra.Command {
 	params.Lc.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				err := params.Root.Execute()
-				if err != nil {
-					return err
-				}
-
-				go func() {
-					params.Runner.wait()
-					err := params.Shutdowner.Shutdown()
-					if err != nil {
-						params.ErrChannel <- err
-					}
-				}()
-
-				return nil
+				return params.Runner.start(params.Root.Execute)
 			},
 			OnStop: func(ctx context.Context) error {
-				params.Runner.stop()
-				return nil
+				return params.Runner.stop()
 			},
 		},
 	)

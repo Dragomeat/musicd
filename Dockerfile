@@ -15,4 +15,4 @@ COPY --from=tools /go/bin/reflex /usr/bin/reflex
 COPY --from=tools /go/bin/sqlc /usr/bin/sqlc
 COPY --from=tools /go/bin/task /usr/bin/task
 
-CMD ["task", "start-api"]
+CMD ["task", "start-dev", "--watch", "--interval", "500ms"]

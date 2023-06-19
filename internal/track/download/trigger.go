@@ -27,25 +27,24 @@ func (s *Trigger) Command() *cobra.Command {
 	return &cobra.Command{
 		Use:  "download [track id]",
 		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-		Run:  s.Run,
+		RunE: s.Run,
 	}
 }
 
-func (s *Trigger) Run(cmd *cobra.Command, args []string) {
-	ctx := cmd.Context()
+func (s *Trigger) Run(cmd *cobra.Command, args []string) error {
+	return s.runner.Run(
+		cmd.Context(),
+		func(ctx context.Context) error {
+			trackId := args[0]
+			workflowId := fmt.Sprintf("track.download.%x", sha1.Sum([]byte(trackId)))
+			workflowOptions := client.StartWorkflowOptions{
+				ID:                    workflowId,
+				WorkflowIDReusePolicy: enums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY,
+				TaskQueue:             "track",
+			}
 
-	s.runner.Run(ctx, func(ctx context.Context) {
-		trackId := args[0]
-		workflowId := fmt.Sprintf("track.download.%x", sha1.Sum([]byte(trackId)))
-		workflowOptions := client.StartWorkflowOptions{
-			ID:                    workflowId,
-			WorkflowIDReusePolicy: enums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY,
-			TaskQueue:             "track",
-		}
-
-		_, err := s.temporal.ExecuteWorkflow(ctx, workflowOptions, WorkflowName, WorkflowInput{Url: trackId})
-		if err != nil {
-			panic(err)
-		}
-	})
+			_, err := s.temporal.ExecuteWorkflow(ctx, workflowOptions, WorkflowName, WorkflowInput{Url: trackId})
+			return err
+		},
+	)
 }

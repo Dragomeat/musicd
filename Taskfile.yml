@@ -1,16 +1,22 @@
 version: "3"
 
 tasks:
-  start-api:
-    desc: Start api
+  start-dev:
+    desc: Start full backend as single process in dev mode
+    deps: [build]
     cmds:
-      - reflex -r '(\.go$|go\.mod)' -R .idea/ -s -d none -- sh -c 'task build && ./bin/musicd serve'
+      - ./bin/musicd dev start
   generate:
     desc: Generate code (gqlgen, sqlc, etc)
     cmds:
       - go generate ./...
   build:
     desc: Build binary
+    sources:
+      - ./**/*.go
+      - go.mod
+    generates:
+      - ./bin/musicd
     cmds:
       - go build -o ./bin/musicd cmd/main.go
   analyze:

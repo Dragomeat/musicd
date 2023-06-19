@@ -29,7 +29,12 @@ func NewModule() fx.Option {
 	return fx.Module(
 		"logger",
 		fx.Provide(
-			NewOriginalZapLogger,
+			fx.Annotate(
+				NewOriginalZapLogger,
+				fx.OnStop(func(logger *zap.Logger) {
+					logger.Sync()
+				}),
+			),
 			NewZapLogger,
 			NewRootEnricher,
 		),

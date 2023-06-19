@@ -56,11 +56,11 @@ func (s *Serve) Command() *cobra.Command {
 	return &cobra.Command{
 		Use:  "serve",
 		Args: cobra.NoArgs,
-		Run:  s.Run,
+		RunE: s.Run,
 	}
 }
 
-func (s *Serve) Run(cmd *cobra.Command, args []string) {
+func (s *Serve) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	server := &netHttp.Server{
@@ -82,7 +82,7 @@ func (s *Serve) Run(cmd *cobra.Command, args []string) {
 		)
 	}
 
-	s.runner.Run(ctx, func(ctx context.Context) {
+	return s.runner.Run(ctx, func(ctx context.Context) error {
 		errChannel := make(chan error)
 		go func() {
 			s.logger.Info(ctx, "http server is starting")
@@ -102,19 +102,17 @@ func (s *Serve) Run(cmd *cobra.Command, args []string) {
 
 				err := server.Shutdown(ctx)
 				if err != nil {
-					s.errChannel <- err
-					return
+					return err
 				}
 
 				s.logger.Info(ctx, "http server has stopped")
-				return
+				return nil
 			case err := <-errChannel:
 				if err == netHttp.ErrServerClosed {
-					return
+					return nil
 				}
 
-				s.errChannel <- fmt.Errorf("http server has failed to run: %w", err)
-				return
+				return fmt.Errorf("http server has failed to run: %w", err)
 			case <-timer.C:
 				s.logger.Info(
 					ctx,

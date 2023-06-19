@@ -29,7 +29,6 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.41.1
 	go.opentelemetry.io/otel v1.15.1
 	go.opentelemetry.io/otel/sdk v1.15.1
-	go.temporal.io/api v1.11.0
 	go.temporal.io/sdk v1.16.0
 	go.temporal.io/sdk/contrib/opentelemetry v0.2.0
 	go.uber.org/fx v1.19.2
@@ -42,6 +41,7 @@ require (
 require (
 	github.com/jackc/puddle/v2 v2.2.0 // indirect
 	go.opentelemetry.io/contrib v1.16.1 // indirect
+	go.temporal.io/api v1.11.0 // indirect
 )
 
 require (

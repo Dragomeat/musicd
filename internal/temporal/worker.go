@@ -11,11 +11,16 @@ import (
 	"go.uber.org/fx"
 )
 
+const (
+	FlagQueue = "queue"
+)
+
 type Worker struct {
 	runner      *cli.Runner
 	logger      logger.Logger
 	temporal    client.Client
 	registerers []Registerer
+	queue       string
 }
 
 type WorkersParams struct {
@@ -37,28 +42,31 @@ func NewWorker(params WorkersParams) *Worker {
 }
 
 func (w *Worker) Command() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:  "worker",
 		Args: cobra.NoArgs,
-		Run:  w.Run,
+		RunE: w.Run,
 	}
+
+	cmd.Flags().StringVarP(&w.queue, FlagQueue, "q", "", "queue name")
+	cmd.MarkFlagRequired(FlagQueue)
+
+	return cmd
 }
 
-func (w *Worker) Run(cmd *cobra.Command, args []string) {
-	ctx := cmd.Context()
+func (w *Worker) Run(cmd *cobra.Command, args []string) error {
+	return w.runner.Run(
+		cmd.Context(),
+		func(ctx context.Context) error {
+			tw := worker.New(w.temporal, w.queue, worker.Options{})
 
-	w.runner.Run(ctx, func(ctx context.Context) {
-		tw := worker.New(w.temporal, "track", worker.Options{})
+			for _, r := range w.registerers {
+				r.Register(tw)
+			}
 
-		for _, r := range w.registerers {
-			r.Register(tw)
-		}
-
-		err := tw.Run(w.interruptCh(ctx))
-		if err != nil {
-			w.logger.Error(context.Background(), "temporal error", logger.Field("err", err))
-		}
-	})
+			return tw.Run(w.interruptCh(ctx))
+		},
+	)
 }
 
 func (w *Worker) interruptCh(ctx context.Context) <-chan interface{} {

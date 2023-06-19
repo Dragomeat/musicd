@@ -6,6 +6,7 @@ import (
 	"musicd/internal/chi"
 	"musicd/internal/cli"
 	"musicd/internal/config"
+	"musicd/internal/dev"
 	"musicd/internal/errors"
 	"musicd/internal/graphql"
 	"musicd/internal/http"
@@ -77,6 +78,7 @@ func main() {
 		graph.Module(),
 		graphql.Module(),
 		temporal.Module(),
+		dev.NewModule(),
 		auth.Module(),
 		media.NewModule(),
 		player.NewModule(),
